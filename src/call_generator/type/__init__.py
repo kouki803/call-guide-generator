@@ -1,5 +1,6 @@
 from .call_event import CallEvent
 from .configs import CallgenConfig, UserProfile
+from .event_group import EventGroup
 from .record_event import RecordedEvent
 
 __all__ = [
@@ -7,4 +8,5 @@ __all__ = [
     "RecordedEvent",
     "UserProfile",
     "CallgenConfig",
+    "EventGroup",
 ]

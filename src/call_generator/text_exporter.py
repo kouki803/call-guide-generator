@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 
-from call_generator.type import CallgenConfig, RecordedEvent
+from call_generator.type import CallgenConfig, EventGroup, RecordedEvent
 
 
 class TextChartExporter:
@@ -13,7 +13,7 @@ class TextChartExporter:
         self.config = config
 
     def _zenkaku_width(self, text: str) -> int:
-        return sum(1 for c in text if unicodedata.east_asian_width(c) in "FWA")
+        return sum(2 if unicodedata.east_asian_width(c) in "FWA" else 1 for c in text)
 
     def _lrc_to_lines(self, lrc_path: Path) -> List[Tuple[float, str]]:
         with open(lrc_path, 'r', encoding='utf-8') as f:
@@ -36,48 +36,70 @@ class TextChartExporter:
             filename (str): ファイル名
         """
         output: List[str] = []
-        lines = self._lrc_to_lines(lrc_path)
+        lrc_lines = self._lrc_to_lines(lrc_path)
 
-        for i, (start_t, text) in enumerate(lines):
+        for i, (start_t, text) in enumerate(lrc_lines):
             # 歌詞区間に含まれるイベントを抽出
-            next_t = lines[i+1][0] if i+1 < len(lines) else start_t + 10.0
-            cur_evs = sorted([e for e in events if start_t <= e.timestamp < next_t], key=lambda x: x.timestamp)
+            next_t = lrc_lines[i+1][0] if i+1 < len(lrc_lines) else start_t + 10.0
+            cur_events = sorted([e for e in events if start_t <= e.timestamp < next_t], key=lambda x: x.timestamp)
             
             # 歌詞行の追加
             output.append(text)
 
             # コール行の追加
-            if not cur_evs:
+            if not cur_events:
                 output.append("")
             else:
                 call_row = ""
-                last_v_pos = 0
-                aggregated: list[list] = [] 
+                last_v_pos = 0 # 行内の列位置
+                aggregated: list[EventGroup] = []
+                
+                current__call_label = ""
+                occur_count = 0
+                first_pos = 0
 
                 # 同一コールの縮約
-                for e in cur_evs:
+                for e in cur_events:
                     pos = int(round((e.timestamp - start_t) * (self.config.bpm / 60.0) * self.config.chars_per_beat))
-                    if aggregated and aggregated[-1][0] == e.call.label:
-                        aggregated[-1][1] += 1
+                    
+                    if e.call.label == current__call_label:
+                        occur_count += 1
                     else:
-                        aggregated.append([e.call, 1, pos])
+                        # ラベルが変わったのでリセット
+                        current__call_label = e.call.label
+                        occur_count = 1                    
+                        first_pos = pos
+                    
+                    # 判定
+                    if occur_count == 5:
+                        for _ in range(4): # 4コ分を破棄
+                            aggregated.pop() 
+                        
+                        aggregated.append(EventGroup(call=e.call, count=5, pos=first_pos))  # pyright: ignore[reportPossiblyUnboundVariable]
+                    
+                    elif occur_count > 5: # 6個目以降はカウントアップのみ
+                        aggregated[-1].count += 1
+                    else:
+                        # 1〜4個目までは個別に打点どおり追加
+                        aggregated.append(EventGroup(call=e.call, count=1, pos=pos))
+
 
                 # コール行の構築
-                for call_def, count, pos in aggregated:
+                for event in aggregated:
                     # 前のコールとの間を全角スペースで埋める
-                    gap = max(0, pos - last_v_pos)
+                    gap = max(0, event.pos - last_v_pos)
                     call_row += "　" * gap
                     
                     # ラベル生成 (例: 【ﾊｲ!】x20 )
-                    label = f"【{call_def.label}】"
-                    if count > 1:
-                        label += f"x{count}"
+                    label = f"【{event.call.label}】"
+                    if event.count > 1:
+                        label += f"x{event.count}"
                     
                     call_row += label
                     
                     # 次の追加位置列算出
                     label_v_width = self._zenkaku_width(label) // 2
-                    last_v_pos = pos + label_v_width
+                    last_v_pos = event.pos + label_v_width
                 output.append(call_row)
             
             # 行間追加
@@ -99,7 +121,7 @@ if __name__ == "__main__":
     config = CallgenConfig()
 
     # 1. 試験用LRCファイルの作成
-    test_lrc = config.pj_root_path / Path("test_sample.lrc")
+    test_lrc = config.pj_root_path / "export" / Path("test_sample.lrc")
     test_lrc.write_text(
         "[00:00.00] イントロダクション\n"
         "[00:04.00] 響き合う 願いが今、目醒めてく\n"
@@ -119,17 +141,19 @@ if __name__ == "__main__":
         RecordedEvent(5.0, call_hai),
         RecordedEvent(5.5, call_hai),
         
-        # 8秒の間奏に対して、10.0s から 1拍おきに ﾊｲ! x4
+        # 8秒の間奏に対して、10.0s から 1拍おきに ﾊｲ! x6
         RecordedEvent(10.0, call_hai),
         RecordedEvent(10.5, call_hai),
         RecordedEvent(11.0, call_hai),
         RecordedEvent(11.5, call_hai),
+        RecordedEvent(12.0, call_hai),
+        RecordedEvent(12.5, call_hai),
         
         # 最後に ﾌッフー!
-        RecordedEvent(12.5, call_fufu),
+        RecordedEvent(13.5, call_fufu),
     ]
 
     # 4. 実行
-    exporter.export(test_lrc, events, "debug_chart.txt")
+    exporter.export(test_lrc, events, "debug_chart1.txt")
 
-    print(Path("./export/debug_chart.txt").read_text(encoding="utf-8"))
+    print(Path("./export/debug_chart1.txt").read_text(encoding="utf-8"))
