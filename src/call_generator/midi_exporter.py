@@ -39,8 +39,9 @@ class MidiExporter:
             track.append(mido.Message('note_off', note=event_def.midi_note, velocity=0, time=10))
             last_tick = abs_tick + 10
 
-        mid.save(f'{self.config.pj_root_path}/export/{filename}')
-        print(f" MIDI saved: {filename}")
+        save_path = self.config.pj_root_path / "export" / filename
+        mid.save(save_path)
+        print(f" MIDI saved: {save_path}")
 
 if __name__ == "__main__":
     from pathlib import Path

@@ -1,5 +1,6 @@
 import re
 import unicodedata
+from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 
@@ -26,7 +27,7 @@ class TextChartExporter:
         lines.sort(key=lambda x: x[0])
         return lines
 
-    def export(self, lrc_path: Path, events: List[RecordedEvent], filename: str) -> None:
+    def export(self, lrc_path: Path, events: List[RecordedEvent], filename: str = f"output_{datetime.now().strftime('%y%m%d%H%M%S')}.txt") -> None:
         """歌詞とコールの生txtを出力する
 
         Args:
