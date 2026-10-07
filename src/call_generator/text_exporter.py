@@ -2,7 +2,6 @@ import re
 import unicodedata
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
 
 from call_generator.type import CallgenConfig, EventGroup, RecordedEvent
 
@@ -15,10 +14,10 @@ class TextChartExporter:
     def _zenkaku_width(self, text: str) -> int:
         return sum(2 if unicodedata.east_asian_width(c) in "FWA" else 1 for c in text)
 
-    def _lrc_to_lines(self, lrc_path: Path) -> List[Tuple[float, str]]:
+    def _lrc_to_lines(self, lrc_path: Path) -> list[tuple[float, str]]:
         with open(lrc_path, 'r', encoding='utf-8') as f:
             lrc_content = f.read()
-        lines: List[tuple[float, str]] = []
+        lines: list[tuple[float, str]] = []
         for _ in lrc_content.splitlines():
             m = re.match(r'\[(\d+):(\d+\.\d+)\](.*)', _)
             if m:
@@ -27,15 +26,15 @@ class TextChartExporter:
         lines.sort(key=lambda x: x[0])
         return lines
 
-    def export(self, lrc_path: Path, events: List[RecordedEvent], filename: str = f"output_{datetime.now().strftime('%y%m%d%H%M%S')}.txt") -> None:
+    def export(self, lrc_path: Path, events: list[RecordedEvent], filename: str = f"output_{datetime.now().strftime('%y%m%d%H%M%S')}.txt") -> None:
         """歌詞とコールの生txtを出力する
 
         Args:
             lrc_path (Path): lrc(歌詞)ファイルのパス
-            events (List[RecordedEvent]): イベントのリスト
+            events (list[RecordedEvent]): イベントのリスト
             filename (str): ファイル名
         """
-        output: List[str] = []
+        output: list[str] = []
         lrc_lines = self._lrc_to_lines(lrc_path)
 
         for i, (start_t, text) in enumerate(lrc_lines):
@@ -60,7 +59,7 @@ class TextChartExporter:
 
                 # 同一コールの縮約
                 for e in cur_events:
-                    pos = int(round((e.timestamp - start_t) * (self.config.bpm / 60.0) * self.config.chars_per_beat))
+                    pos = round((e.timestamp - start_t) * (self.config.bpm / 60.0) * self.config.chars_per_beat)
                     
                     if e.call.label == current__call_label:
                         occur_count += 1
@@ -135,7 +134,7 @@ if __name__ == "__main__":
     call_hai = CallEvent("ﾊｲ!", 60, Path(""))
     call_fufu = CallEvent("ﾌッフー!", 62, Path(""))
 
-    events: List[RecordedEvent] = [
+    events: list[RecordedEvent] = [
         # 4秒の歌詞に対して、4.5s, 5.0s, 5.5s に配置 (1拍 = 0.5s)
         RecordedEvent(4.5, call_hai),
         RecordedEvent(5.0, call_hai),

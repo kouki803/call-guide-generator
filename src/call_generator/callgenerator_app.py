@@ -1,5 +1,4 @@
 import time
-from typing import List
 
 from pynput import keyboard
 
@@ -22,7 +21,7 @@ class CallgeneratorApp:
                 # メディア再生キー送出
                 self.kb_controller.press(keyboard.Key.media_play_pause)
                 self.kb_controller.release(keyboard.Key.media_play_pause)
-                
+
                 if self.is_recording:
                     self.recorded_events = []
                     self.start_time = time.time()
@@ -40,7 +39,7 @@ class CallgeneratorApp:
                     self.recorded_events.append(RecordedEvent(time.time() - self.start_time, event_def))
                     print(f"Captured: {event_def.label}")
 
-        except Exception as e:
+        except (AttributeError, TypeError, ValueError) as e:
             print(f"Error in on_press: {e}")
 
     def run(self):

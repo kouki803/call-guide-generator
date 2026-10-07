@@ -1,20 +1,19 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 from .call_event import CallEvent
 
 
 class UserProfile:
     """CallEventとキーバインド設定を保持するコンテナ"""
-    def __init__(self, mappings: List[Tuple[str, CallEvent]]) -> None:
+    def __init__(self, mappings: list[tuple[str, CallEvent]]) -> None:
         self._mappings = mappings
 
     def __iter__(self):
         return iter(self._mappings)
 
-    def find_by_key(self, char: str) -> Optional[Tuple[int, CallEvent]]:
+    def find_by_key(self, char: str) -> tuple[int, CallEvent] | None:
         for i, (key, event) in enumerate(self._mappings):
             if key == char:
                 return i, event
