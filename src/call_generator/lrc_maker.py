@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 
-def _play_pause():
+def _play_pause() -> None:
 	"""Send the Windows media play/pause key event."""
 	user32 = ctypes.windll.user32
 	vk_media_play_pause = 0xB3
@@ -16,60 +16,64 @@ def _play_pause():
 	user32.keybd_event(vk_media_play_pause, 0, keyeventf_keyup, 0)
 
 
-def _timestamp(seconds):
+def _timestamp(seconds: float) -> str:
 	centiseconds = int(seconds * 100)
 	minutes, remainder = divmod(centiseconds, 6000)
 	secs, centis = divmod(remainder, 100)
 	return f"[{minutes:02d}:{secs:02d}.{centis:02d}]"
 
-def _format_line_text(line):
-	"""CLI表示用のテキスト整形（空白行の場合はプレースホルダーを表示）"""
-	return line if line.strip() else "(空白行)"
 
-def _show(lines, lyric_indices, marked, position, started_at):
+def _format_line(lines: list, marked: dict, index: int) -> str:
+	"""行のプレビュー文字列を生成"""
+	if index < 0 or index >= len(lines):
+		return "(なし)"
+	raw_text = lines[index]
+	display_text = raw_text if raw_text.strip() else "(空白行)"
+	prefix = marked.get(index, "")
+	return f"{prefix}{display_text}"
+
+
+def _show(lines: list, marked: dict, position: int, started_at: float) -> None:
+	# 画面を完全クリアしてカーソルを左上へ
 	print("\033[2J\033[H", end="")
-	# print("スペース: 再生開始 / 次の行にタイムスタンプ   q: 保存して終了")
+
 	if started_at is None:
-		print("再生開始待ち")
+		print("【状態: 再生開始待ち】(スペース押下: 再生開始 & 1行目のスタンプ待機 / q: 終了)")
+	elif position >= len(lines):
+		print("【状態: 完了】全ての行にタイムスタンプを付けました。(q: 保存して終了)")
 	else:
-		pass
-        # print(f"経過時間: {time.monotonic() - started_at:.2f} 秒")
+		elapsed = time.monotonic() - started_at
+		print(f"【経過時間: {elapsed:.2f}秒】(スペース押下: 現在行にスタンプ / q: 終了)")
 
-	if position >= len(lyric_indices):
-		print("全ての歌詞にタイムスタンプを付けました。")
-		return
+	print("-" * 50)
 
-	# 前2行、現在行、次1行を表示
-	start_idx = max(0, position - 2)
-	end_idx = min(len(lines), position + 2)
+	# 確定行 (-2)
+	line_minus_2 = _format_line(lines, marked, position - 2)
+	print(f"   {line_minus_2}")
 
-	for index in range(start_idx, end_idx):
-		marker = ">" if index == position else " "
-		prefix = marked.get(index, "")
-		text = _format_line_text(lines[index])
-		print(f"{marker} {prefix}{text}")
+	# 確定行 (-1)
+	line_minus_1 = _format_line(lines, marked, position - 1)
+	print(f"   {line_minus_1}")
 
-	current = lyric_indices[position]
-	for index in range(max(0, current - 1), min(len(lines), current + 2)):
-		if index == current:
-			marker = ">"
-		elif index < current:
-			marker = " "
-		else:
-			marker = " "
-		prefix = marked.get(index, "")
-		text = _format_line_text(lines[index])
-		print(f"{marker} {prefix}{text}")
+	# スタンプ待ち行 (0)
+	if position < len(lines):
+		curr_text = lines[position]
+		disp_curr = curr_text if curr_text.strip() else "(空白行)"
+		print(f"> : {disp_curr}")
+	else:
+		print("> : (全行スタンプ完了)")
+
+	print("-" * 50)
 
 
-def make_lrc(source, destination):
+def make_lrc(source: Path, lrc_out: Path) -> None:
+	# 空白行も含めてそのまま全行保持
 	lines = Path(source).read_text(encoding="utf-8-sig").splitlines()
-	lyric_indices = [i for i, line in enumerate(lines) if line.strip()]
 	marked = {}
 	position = 0
 	started_at = None
 
-	_show(lines, lyric_indices, marked, position, started_at)
+	_show(lines, marked, position, started_at)
 	while True:
 		key = msvcrt.getwch()
 		if key.lower() == "q" or key == "\x1b":
@@ -78,26 +82,38 @@ def make_lrc(source, destination):
 			continue
 
 		if started_at is None:
+			# 初回スペース: 再生開始
 			_play_pause()
 			started_at = time.monotonic()
-		elif position < len(lyric_indices):
-			marked[lyric_indices[position]] = _timestamp(time.monotonic() - started_at)
+		elif position < len(lines):
+			# 空白行であっても現在位置にタイムスタンプを付与
+			marked[position] = _timestamp(time.monotonic() - started_at)
 			position += 1
-		_show(lines, lyric_indices, marked, position, started_at)
+
+		_show(lines, marked, position, started_at)
+
+	# ファイル出力
+	lrc_out.parent.mkdir(parents=True, exist_ok=True)
 
 	output = [f"{marked[i]}{line}" if i in marked else line for i, line in enumerate(lines)]
-	Path(destination).write_text("\n".join(output) + "\n", encoding="utf-8")
-	print(f"保存しました: {destination}")
+	lrc_out.write_text("\n".join(output) + "\n", encoding="utf-8")
+	print(f"\n保存しました: {lrc_out}")
 
 
 def main():
 	parser = argparse.ArgumentParser(description="歌詞テキストにLRCタイムスタンプを付けます")
 	parser.add_argument("lyrics", help="時刻無しの歌詞テキスト")
-	parser.add_argument("-o", "--output", help="出力ファイル (既定: 入力名.lrc)")
+	parser.add_argument("-o", "--output", help="出力ファイル (既定: 入力フォルダ内/[入力ファイル名]_timed.lrc)")
 	args = parser.parse_args()
+
 	source = Path(args.lyrics)
-	destination = Path("./export/") / args.output if args.output else source.with_suffix(".lrc")
-	make_lrc(source, destination)
+
+	if args.output:
+		lrc_output_path = Path(args.output)
+	else:
+		lrc_output_path = source.parent / f"{source.stem}_timed.lrc"
+
+	make_lrc(source, lrc_output_path)
 
 
 if __name__ == "__main__":
