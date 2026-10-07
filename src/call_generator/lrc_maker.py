@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 def _play_pause() -> None:
-	"""Send the Windows media play/pause key event."""
+	"""Windowsのメディア再生/一時停止キーイベントを送信"""
 	user32 = ctypes.windll.user32
 	vk_media_play_pause = 0xB3
 	keyeventf_keyup = 0x0002
@@ -66,9 +66,32 @@ def _show(lines: list, marked: dict, position: int, started_at: float) -> None:
 	print("-" * 50)
 
 
+def resolve_output_path(source: Path, output_arg: str | None = None) -> Path:
+	"""出力先パスを決定し、既存ファイルと重複しない一意のパスを返す"""
+	if output_arg:
+		base_path = Path(output_arg)
+	else:
+		base_path = source.parent / f"{source.stem}_timed.lrc"
+	base_path.parent.mkdir(parents=True, exist_ok=True)
+
+	if not base_path.exists():
+		return base_path
+	else:
+		# 既存ファイルがある場合に重複しない_nを採番
+		parent = base_path.parent
+		stem = base_path.stem
+		suffix = base_path.suffix
+
+		n = 1
+		while True:
+			candidate = parent / f"{stem}_{n}{suffix}"
+			if not candidate.exists():
+				return candidate
+			n += 1
+
+
 def make_lrc(source: Path, lrc_out: Path) -> None:
-	# 空白行も含めてそのまま全行保持
-	lines = Path(source).read_text(encoding="utf-8-sig").splitlines()
+	lines = source.read_text(encoding="utf-8-sig").splitlines()
 	marked = {}
 	position = 0
 	started_at = None
@@ -92,9 +115,6 @@ def make_lrc(source: Path, lrc_out: Path) -> None:
 
 		_show(lines, marked, position, started_at)
 
-	# ファイル出力
-	lrc_out.parent.mkdir(parents=True, exist_ok=True)
-
 	output = [f"{marked[i]}{line}" if i in marked else line for i, line in enumerate(lines)]
 	lrc_out.write_text("\n".join(output) + "\n", encoding="utf-8")
 	print(f"\n保存しました: {lrc_out}")
@@ -106,14 +126,10 @@ def main():
 	parser.add_argument("-o", "--output", help="出力ファイル (既定: 入力フォルダ内/[入力ファイル名]_timed.lrc)")
 	args = parser.parse_args()
 
-	source = Path(args.lyrics)
+	source_path = Path(args.lyrics)
+	lrc_out = resolve_output_path(source_path, args.output)
 
-	if args.output:
-		lrc_output_path = Path(args.output)
-	else:
-		lrc_output_path = source.parent / f"{source.stem}_timed.lrc"
-
-	make_lrc(source, lrc_output_path)
+	make_lrc(source_path, lrc_out)
 
 
 if __name__ == "__main__":
