@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List
 
 import mido
 
@@ -9,24 +8,29 @@ from call_generator.type import CallgenConfig, RecordedEvent
 class MidiExporter:
     """MIDIファイルへの書き出しクラス
     """
-    def __init__(self, config: CallgenConfig):
+    def __init__(self, config: CallgenConfig, lrc_name: str ):
         """_summary_
 
         Args:
             config (CallgenConfig): _description_
+            lrc_name (str): LRCファイルの名前
         """
         self.config = config
+        self.lrc_name = lrc_name
 
         # calc_quantize_unit
         self.GRID_16N = self.config.resolution // 4 # 16分は4分音符の1/4 (midiは4分音符基準)
 
-    def save(self, events: List[RecordedEvent], filename: str = f"output_{datetime.now().strftime('%y%m%d%H%M%S')}.mid") -> None:
+    def save(self, events: list[RecordedEvent], filename: str | None = None) -> None:
         """イベントのリストを読み込んでmidiファイルを生成する
 
         Args:
             events (List[RecordedEvent]): イベントリスト
             filename (str): ファイル名
         """
+        if filename is None:
+            filename = f"{self.lrc_name}_{datetime.now().strftime('%y%m%d%H%M%S')}.mid"
+
         mid = mido.MidiFile(ticks_per_beat=self.config.resolution)
         track = mido.MidiTrack()
         mid.tracks.append(track)
@@ -39,10 +43,10 @@ class MidiExporter:
             event_def = e.call
             
             # 浮動小数点の秒数から生の絶対tickを算出
-            raw_tick = int(round(e.timestamp * (self.config.bpm / 60.0) * self.config.resolution))
+            raw_tick = round(e.timestamp * (self.config.bpm / 60.0) * self.config.resolution)
             
             # 16分音符のグリッドに丸める
-            abs_tick = int(round(raw_tick / self.GRID_16N) * self.GRID_16N)
+            abs_tick = round(raw_tick / self.GRID_16N) * self.GRID_16N
             
             # 前のメッセージからのデルタタイムを計算
             delta_on = max(0, abs_tick - current_tick)
@@ -68,7 +72,7 @@ if __name__ == "__main__":
 
     from call_generator.type import CallEvent, CallgenConfig
 
-    midiex = MidiExporter(config=CallgenConfig())  
+    midiex = MidiExporter(config=CallgenConfig(), lrc_name="test")  
     
     test_mappings = [
         CallEvent("ﾊｲ!", 60, Path(".sounds/hai.wav")),
@@ -76,7 +80,7 @@ if __name__ == "__main__":
         CallEvent("fw!", 64, Path(".sounds/fw.wav"))
     ]
 
-    events: List[RecordedEvent] = []
+    events: list[RecordedEvent] = []
 
     current_relative_time = 0.0
     for i in range(10):
