@@ -56,6 +56,8 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "mypy" },
+    { name = "py2puml" },
+    { name = "pydoctrace" },
     { name = "ruff" },
 ]
 
@@ -68,6 +70,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "mypy", specifier = ">=2.1.0" },
+    { name = "py2puml", specifier = ">=0.11.0" },
+    { name = "pydoctrace", specifier = ">=0.3.0" },
     { name = "ruff", specifier = ">=0.16.10" },
 ]
 
@@ -218,6 +222,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5a/82/42f767fc1c1143d6fd36efb827202a2d997a375e160a71eb2888a925aac1/pathspec-1.1.1.tar.gz", hash = "sha256:17db5ecd524104a120e173814c90367a96a98d07c45b2e10c2f3919fff91bf5a", size = 135180, upload-time = "2026-04-27T01:46:08.907Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/d9/7fb5aa316bc299258e68c73ba3bddbc499654a07f151cba08f6153988714/pathspec-1.1.1-py3-none-any.whl", hash = "sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189", size = 57328, upload-time = "2026-04-27T01:46:07.06Z" },
+]
+
+[[package]]
+name = "py2puml"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/87/65/51eb076157c34ca7686726c45a92da1bc2cb72e8d95c292f4cb86f0982ab/py2puml-0.11.0.tar.gz", hash = "sha256:a08ce1988e163ebcb9e0f2fbc6e6b1251e0abd1f9cf1f2e32a32744cb85a99ea", size = 19974, upload-time = "2026-02-18T13:20:57.835Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/87/15d07aabfbd2ff1e6836aa7871c675a1b709d85a1cb46342622efefebdf0/py2puml-0.11.0-py3-none-any.whl", hash = "sha256:a64689d149db7d6d3253a719be4050a2b4e2802758481bd0ca1da2400f8d9f49", size = 27092, upload-time = "2026-02-18T13:20:56.316Z" },
+]
+
+[[package]]
+name = "pydoctrace"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/60/c6207a6b672dfbf1b48bb6394badd0cca4a13757c2531cc958e9ee55aa70/pydoctrace-0.3.0.tar.gz", hash = "sha256:8625d73c53fac3dac5b3dc893522583056f8b831f80cbf3e05b803d30a2a813b", size = 27383, upload-time = "2024-02-27T20:21:04.827Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3a/40/9dfdfec8fda34c4a1a62992c4f0d41f290415cda488144ed5b23dbd13561/pydoctrace-0.3.0-py3-none-any.whl", hash = "sha256:51e1c2b4625a6d9a6bf2764160ad33f0127031d33c1e3f44371f9866959bc2ad", size = 26233, upload-time = "2024-02-27T20:20:41.146Z" },
 ]
 
 [[package]]
