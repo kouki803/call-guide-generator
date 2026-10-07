@@ -48,7 +48,10 @@ class CallgeneratorApp:
 
         while self.is_recording:
             current_elapsed = time.time() - self.start_time
-            while lyric_idx < total_lyrics and current_elapsed >= self.lyrics[lyric_idx][0]:
+            while (
+                lyric_idx < total_lyrics
+                and current_elapsed >= self.lyrics[lyric_idx][0]
+            ):
                 t, text = self.lyrics[lyric_idx]
                 mins, secs = divmod(int(t), 60)
                 print(f"\n🎵 [{mins:02d}:{secs:02d}] {text}")
@@ -99,9 +102,10 @@ class CallgeneratorApp:
         print("2. [SPACE] を押すと再生と同時にレコーディング開始。")
         print("3. 数字キー [1]〜[0] 押下でコールを入力。")
         print("4. もう一度 [SPACE] を押すと終了し、ファイルを保存")
-        
+
         with keyboard.Listener(on_press=self.on_press) as listener:
             listener.join()
+
 
 # ---  テスト実行用 Main ---
 
@@ -112,7 +116,7 @@ if __name__ == "__main__":
     from call_generator.text_exporter import TextChartExporter
     from call_generator.type import CallEvent, UserProfile
 
-        # ハードコーディングによるテスト設定
+    # ハードコーディングによるテスト設定
     test_mappings = [
         ("1", CallEvent("fu", 60, Path(".sounds/fu.wav"))),
         ("2", CallEvent("fufuu", 62, Path(".sounds/fufuu.wav"))),

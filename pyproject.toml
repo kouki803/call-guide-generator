@@ -12,6 +12,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "mypy>=2.1.0",
+    "ruff>=0.16.10",
 ]
 
 [build-system]
@@ -20,3 +21,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/call_generator"]
+
+[tool.ruff.lint]
+ignore = ["DTZ005"]

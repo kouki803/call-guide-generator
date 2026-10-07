@@ -5,8 +5,8 @@ from .record_event import RecordedEvent
 
 __all__ = [
     "CallEvent",
-    "RecordedEvent",
-    "UserProfile",
     "CallgenConfig",
     "EventGroup",
+    "RecordedEvent",
+    "UserProfile",
 ]
