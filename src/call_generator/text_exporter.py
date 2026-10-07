@@ -90,7 +90,7 @@ class TextChartExporter:
                     call_row += "　" * gap
                     
                     # ラベル生成 (例: 【ﾊｲ!】x20 )
-                    label = f"【{event.call.label}】"
+                    label = f"({event.call.label})"
                     if event.count > 1:
                         label += f"x{event.count}"
                     
@@ -102,7 +102,7 @@ class TextChartExporter:
                 output.append(call_row)
             
             # 行間追加
-            output.append("")
+            # output.append("")
 
         # ファイル書き出し
         save_path = Path(self.config.pj_root_path) / "export" / filename

@@ -8,7 +8,7 @@ from call_generator.type import CallgenConfig, RecordedEvent
 class CallgeneratorApp:
     def __init__(self, config: CallgenConfig):
         self.config = config
-        self.recorded_events: List[RecordedEvent] = []
+        self.recorded_events: list[RecordedEvent] = []
         self.is_recording = False
         self.start_time = 0.0
         self.kb_controller = keyboard.Controller()
@@ -28,7 +28,7 @@ class CallgeneratorApp:
                     print("\n🔴 Recording Started...")
                 else:
                     print("⏹️ Recording Stopped.")
-                    return False # リスナーを停止して保存フェーズへ
+                    return False  # リスナーを停止して保存フェーズへ
                 return
 
             # コール入力の記録
@@ -62,9 +62,14 @@ if __name__ == "__main__":
 
         # ハードコーディングによるテスト設定
     test_mappings = [
-        ("1", CallEvent("ﾊｲ!", 60, Path(".sounds/hai.wav"))),
-        ("2", CallEvent("ﾌッフー!", 62, Path(".sounds/fufu.wav"))),
-        ("3", CallEvent("fw!", 64, Path(".sounds/fw.wav")))
+        ("1", CallEvent("fu", 60, Path(".sounds/fu.wav"))),
+        ("2", CallEvent("fufuu", 62, Path(".sounds/fufuu.wav"))),
+        ("3", CallEvent("fwfw", 64, Path(".sounds/fwfw.wav"))),
+        ("4", CallEvent("PPPH", 65, Path(".sounds/PPPH.wav"))),
+        ("5", CallEvent("Yeah", 66, Path(".sounds/yeah.wav"))),
+        ("6", CallEvent("hi", 67, Path(".sounds/hi.wav"))),
+        ("7", CallEvent("👏", 68, Path(".sounds/clap.wav"))),
+        ("9", CallEvent("○○", 69, Path(".sounds/waah.wav")))
     ]
     
     test_profile = UserProfile(test_mappings)
