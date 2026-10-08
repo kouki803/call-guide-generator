@@ -95,9 +95,9 @@ class TextChartExporter:
 
                 # コール行の構築
                 for event in aggregated:
-                    # 前のコールとの間を半角スペースで埋める
+                    # 前のコールとの間を全角スペース2コで埋める
                     gap = max(0, event.pos - last_v_pos)
-                    call_row += " " * gap
+                    call_row += "　　" * gap
 
                     # ラベル生成 (例: (ﾊｲ!)x20 )
                     label = f"({event.call.label})"
