@@ -6,6 +6,7 @@ from pathlib import Path
 from pynput import keyboard
 
 from call_generator.type import CallgenConfig, RecordedEvent
+from call_generator.util.mediakey_controller import MediaKeyController
 
 
 class CallgeneratorApp:
@@ -20,7 +21,7 @@ class CallgeneratorApp:
         self.recorded_events: list[RecordedEvent] = []
         self.is_recording = False
         self.start_time = 0.0
-        self.kb_controller = keyboard.Controller()
+        self.media_key_controller = MediaKeyController()
         self.display_thread: threading.Thread | None = None
 
     def _load_lrc(self, file_path: Path) -> list[tuple[float, str]]:
@@ -65,8 +66,7 @@ class CallgeneratorApp:
             if key == keyboard.Key.space:
                 self.is_recording = not self.is_recording
                 # メディア再生キー送出
-                self.kb_controller.press(keyboard.Key.media_play_pause)
-                self.kb_controller.release(keyboard.Key.media_play_pause)
+                self.media_key_controller.send_play_pause()
 
                 if self.is_recording:
                     self.recorded_events = []
@@ -117,18 +117,17 @@ if __name__ == "__main__":
     from call_generator.type import CallEvent, UserProfile
 
     # ハードコーディングによるテスト設定
-    test_mappings = [
+    test_profile = UserProfile([
         ("1", CallEvent("fu", 60, Path(".sounds/fu.wav"))),
-        ("2", CallEvent("fufuu", 62, Path(".sounds/fufuu.wav"))),
+        ("2", CallEvent("fufuu!", 62, Path(".sounds/fufuu.wav"))),
         ("3", CallEvent("fwfw", 64, Path(".sounds/fwfw.wav"))),
         ("4", CallEvent("PPPH", 65, Path(".sounds/PPPH.wav"))),
-        ("5", CallEvent("Yeah", 66, Path(".sounds/yeah.wav"))),
+        ("5", CallEvent("Yeah!", 66, Path(".sounds/yeah.wav"))),
         ("6", CallEvent("hi", 67, Path(".sounds/hi.wav"))),
-        ("7", CallEvent("👏", 68, Path(".sounds/clap.wav"))),
+        ("7", CallEvent("はーい！はーい！はいはいはいはい！", 67, Path(".sounds/keiho.wav"))),
+        ("8", CallEvent("👏", 68, Path(".sounds/clap.wav"))),
         ("9", CallEvent("○○", 69, Path(".sounds/waah.wav"))),
-    ]
-
-    test_profile = UserProfile(test_mappings)
+    ])
     config = CallgenConfig(bpm=140.0, profile=test_profile)
 
     arg_parser = ArgumentParser(description="Call Generator Prototype")

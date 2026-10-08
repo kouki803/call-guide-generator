@@ -1,19 +1,17 @@
 """Interactively add LRC timestamps to a plain, line-broken lyrics file."""
 
 import argparse
-import ctypes
 import msvcrt
 import time
 from pathlib import Path
 
+from call_generator.util.mediakey_controller import MediaKeyController
+
 
 def _play_pause() -> None:
     """Windowsのメディア再生/一時停止キーイベントを送信"""
-    user32 = ctypes.windll.user32
-    vk_media_play_pause = 0xB3
-    keyeventf_keyup = 0x0002
-    user32.keybd_event(vk_media_play_pause, 0, 0, 0)
-    user32.keybd_event(vk_media_play_pause, 0, keyeventf_keyup, 0)
+    media_key_controller = MediaKeyController()
+    media_key_controller.send_play_pause()
 
 
 def _timestamp(seconds: float) -> str:
@@ -33,7 +31,7 @@ def _format_line(lines: list, marked: dict, index: int) -> str:
     return f"{prefix}{display_text}"
 
 
-def _show(lines: list, marked: dict, position: int, started_at: float) -> None:
+def _show(lines: list, marked: dict, position: int, started_at: float | None) -> None:
     # 画面を完全クリアしてカーソルを左上へ
     print("\033[2J\033[H", end="")
 
@@ -99,6 +97,8 @@ def make_lrc(source: Path, lrc_out: Path) -> None:
     marked = {}
     position = 0
     started_at = None
+    media_key_controller = MediaKeyController()
+
 
     _show(lines, marked, position, started_at)
     while True:
@@ -110,7 +110,7 @@ def make_lrc(source: Path, lrc_out: Path) -> None:
 
         if started_at is None:
             # 初回スペース: 再生開始
-            _play_pause()
+            media_key_controller.send_play_pause()
             started_at = time.monotonic()
         elif position < len(lines):
             # 空白行であっても現在位置にタイムスタンプを付与
@@ -124,6 +124,7 @@ def make_lrc(source: Path, lrc_out: Path) -> None:
     ]
     lrc_out.write_text("\n".join(output) + "\n", encoding="utf-8")
     print(f"\n保存しました: {lrc_out}")
+    media_key_controller.send_play_pause()
 
 
 def main():
