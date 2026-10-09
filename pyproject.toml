@@ -9,6 +9,10 @@ dependencies = [
     "pynput>=1.8.1",
 ]
 
+[project.scripts]
+lrc_make = "call_generator.lrc_maker:main"
+call_record = "call_generator.callgenerator_app:main"
+
 [dependency-groups]
 dev = [
     "mypy>=2.1.0",
@@ -19,6 +23,7 @@ dev = [
 
 [tool.uv]
 package = true
+
 
 [build-system]
 requires = ["hatchling"]

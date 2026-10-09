@@ -1,0 +1,64 @@
+@startuml
+autonumber
+skinparam BoxPadding 10
+skinparam ParticipantPadding 10
+
+actor "ユーザー" as User
+participant "Main\n(__main__)" as Main
+participant "CallgeneratorApp" as App
+participant "MediaKeyController" as MediaKey
+participant "OS / 外部プレイヤー\n(YouTube / Media Go 等)" as ExternalPlayer
+participant "keyboard.Listener\n(スレッド)" as Listener
+participant "歌詞表示スレッド\n(_lyrics_display_loop)" as DisplayThread
+participant "MidiExporter" as MidiExp
+participant "TextChartExporter" as TextExp
+
+== 1. 初期化 & 起動 ==
+User -> Main: スクリプト実行 (lrcファイル指定)
+activate Main
+
+Main -> App: __init__(config, lrc_path)
+activate App
+App -> App: _load_lrc(file_path)\n[歌詞ファイル解析 & ソート]
+create MediaKey
+App -> MediaKey: __init__()
+App --> Main: app インスタンス
+deactivate App
+
+Main -> App: run()
+activate App
+create Listener
+App -> Listener: keyboard.Listener(on_press=self.on_press)
+App -> Listener: listener.join()
+activate Listener
+
+== 2. 録音開始 (Spaceキー押下) ==
+User -> Listener: Key.space 押下
+Listener -> App: on_press(Key.space)
+activate App
+
+App -> App: is_recording = True\nstart_time = time.time()
+App -> MediaKey: send_play_pause()
+activate MediaKey
+MediaKey -> ExternalPlayer: メディア再生キー送出\n(個別アプリ通知 / グローバルキー)
+activate ExternalPlayer
+ExternalPlayer --> MediaKey:
+deactivate ExternalPlayer
+MediaKey --> App:
+deactivate MediaKey
+
+create DisplayThread
+App -> DisplayThread: threading.Thread(target=_lyrics_display_loop)
+App -> DisplayThread: start()
+activate DisplayThread
+
+App --> Listener: 処理継続
+deactivate App
+
+== 3. ループ処理 (歌詞表示 & コール記録) ==
+par 歌詞表示ループ
+    loop is_recording == True
+        DisplayThread -> DisplayThread: 経過時間を計測\n(time.time() - start_time)
+        opt 経過時間 >= 歌詞タイムスタンプ
+            DisplayThread -> DisplayThread: print(歌詞テキスト)
+        end
