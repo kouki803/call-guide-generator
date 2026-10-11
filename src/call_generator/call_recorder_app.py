@@ -9,7 +9,7 @@ from call_generator.type import CallgenConfig, RecordedEvent
 from call_generator.util.mediakey_controller import MediaKeyController
 
 
-class CallgeneratorApp:
+class CallRecorderApp:
     def __init__(self, config: CallgenConfig, lrc_path: Path):
         self.config = config
         self.lrc_path = lrc_path
@@ -108,8 +108,7 @@ class CallgeneratorApp:
 
 
 # ---  テスト実行用 Main ---
-
-if __name__ == "__main__":
+def main():
     from argparse import ArgumentParser
 
     from call_generator.midi_exporter import MidiExporter
@@ -128,16 +127,22 @@ if __name__ == "__main__":
         ("8", CallEvent("👏", 68, Path(".sounds/clap.wav"))),
         ("9", CallEvent("○○", 69, Path(".sounds/waah.wav"))),
     ])
-    config = CallgenConfig(bpm=140.0, profile=test_profile)
+    config = CallgenConfig(profile=test_profile)
 
     arg_parser = ArgumentParser(description="Call Generator Prototype")
     arg_parser.add_argument("lrc", type=Path, help="LRCファイル")
+    arg_parser.add_argument(
+        "-o", "--output", type=Path, default=Path(config.pj_root_path) / "export", help="出力フォルダ（省略時は ./export/ に保存）"
+    )
     args = arg_parser.parse_args()
 
-    app = CallgeneratorApp(config, lrc_path=args.lrc)
+    app = CallRecorderApp(config, lrc_path=args.lrc)
     app.run()
 
     # export
     if app.recorded_events:
-        MidiExporter(config, lrc_name=args.lrc.stem).save(app.recorded_events)
-        TextChartExporter(config).export(args.lrc, app.recorded_events)
+        MidiExporter(config, lrc_name=args.lrc.stem).save(app.recorded_events, save_folder_path=args.output)
+        TextChartExporter(config).export(args.lrc, app.recorded_events, save_folder_path=args.output)
+
+if __name__ == "__main__":
+    main()

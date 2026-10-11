@@ -11,7 +11,7 @@ dependencies = [
 
 [project.scripts]
 lrc_make = "call_generator.lrc_maker:main"
-call_record = "call_generator.callgenerator_app:main"
+call_record = "call_generator.call_recorder_app:main"
 
 [dependency-groups]
 dev = [

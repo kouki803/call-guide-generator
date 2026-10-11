@@ -90,8 +90,8 @@ if __name__ == "__main__":
     midiex = MidiExporter(config=CallgenConfig(), lrc_name="test")
 
     test_mappings = [
-        CallEvent("ﾊｲ!", 60, Path(".sounds/hai.wav")),
-        CallEvent("ﾌッフー!", 62, Path(".sounds/fufu.wav")),
+        CallEvent("Hi!", 60, Path(".sounds/hai.wav")),
+        CallEvent("fufuu!", 62, Path(".sounds/fufuu.wav")),
         CallEvent("fw!", 64, Path(".sounds/fw.wav")),
     ]
 

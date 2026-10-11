@@ -1,12 +1,16 @@
 # 初期設定
 
-1. uvをインストールする
-    ```powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"```
+1. uvをインストールする  
+    ```powershell 
+    -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
 
     [公式マニュアル](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer)
 
-2. ライブラリ，python仮想環境の設定  
-  uv syncでライブラリなどを同期する
+2. このリポジトリをcloneする
+
+3. ライブラリ，python仮想環境の設定  
+  `uv sync`でライブラリなどを同期する
 
 # 操作方法
 ## 歌詞タイミング記録
