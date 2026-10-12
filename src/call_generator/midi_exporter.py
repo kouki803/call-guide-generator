@@ -1,4 +1,4 @@
-from datetime import datetime
+from pathlib import Path
 
 import mido
 
@@ -8,31 +8,26 @@ from call_generator.type import CallgenConfig, RecordedEvent
 class MidiExporter:
     """MIDIファイルへの書き出しクラス"""
 
-    def __init__(self, config: CallgenConfig, lrc_name: str):
+    def __init__(self, config: CallgenConfig):
         """_summary_
 
         Args:
             config (CallgenConfig): _description_
-            lrc_name (str): LRCファイルの名前
         """
         self.config = config
-        self.lrc_name = lrc_name
 
         # calc_quantize_unit
         self.GRID_16N = (
             self.config.resolution // 4
         )  # 16分は4分音符の1/4 (midiは4分音符基準)
 
-    def save(self, events: list[RecordedEvent], filename: str | None = None) -> None:
+    def save(self, events: list[RecordedEvent], save_path: Path) -> None:
         """イベントのリストを読み込んでmidiファイルを生成する
 
         Args:
             events (List[RecordedEvent]): イベントリスト
-            filename (str): ファイル名
+            save_path (Path): 保存パス＋ファイル名（拡張子なし）
         """
-        if filename is None:
-            filename = f"{self.lrc_name}_{datetime.now().strftime('%y%m%d%H%M%S')}.mid"
-
         mid = mido.MidiFile(ticks_per_beat=self.config.resolution)
         track = mido.MidiTrack()
         mid.tracks.append(track)
@@ -77,17 +72,18 @@ class MidiExporter:
             current_tick += duration
 
         # ファイル保存
-        save_path = self.config.pj_root_path / "export" / filename
+        save_path = save_path.with_suffix(".mid")
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
         mid.save(save_path)
         print(f" MIDI saved: {save_path}")
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-
     from call_generator.type import CallEvent, CallgenConfig
+    from call_generator.util.fname_resolver import FnameResolver
 
-    midiex = MidiExporter(config=CallgenConfig(), lrc_name="test")
+    midiex = MidiExporter(config=CallgenConfig())
 
     test_mappings = [
         CallEvent("Hi!", 60, Path(".sounds/hai.wav")),
@@ -104,4 +100,4 @@ if __name__ == "__main__":
             RecordedEvent(timestamp=current_relative_time, call=test_mappings[i % 3])
         )
 
-    midiex.save(events)
+    midiex.save(events, FnameResolver.out_file_path("test_music"))

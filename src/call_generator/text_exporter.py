@@ -1,6 +1,5 @@
 import re
 import unicodedata
-from datetime import datetime
 from pathlib import Path
 
 from call_generator.type import CallgenConfig, EventGroup, RecordedEvent
@@ -9,8 +8,9 @@ from call_generator.type import CallgenConfig, EventGroup, RecordedEvent
 class TextChartExporter:
     """歌詞＋コール表のテキストを書き出すクラス"""
 
-    def __init__(self, config: CallgenConfig):
+    def __init__(self, config: CallgenConfig, lrc_path: Path):
         self.config = config
+        self.lrc_lines = self._lrc_to_lines(lrc_path)
 
     def _zenkaku_width(self, text: str) -> int:
         return sum(2 if unicodedata.east_asian_width(c) in "FWA" else 1 for c in text)
@@ -27,9 +27,7 @@ class TextChartExporter:
         lines.sort(key=lambda x: x[0])
         return lines
 
-    def export(
-        self, lrc_path: Path, events: list[RecordedEvent], filename: str | None = None
-    ) -> None:
+    def export(self,events: list[RecordedEvent],save_path: Path) -> None:
         """歌詞とコールの生txtを出力する
 
         Args:
@@ -37,15 +35,12 @@ class TextChartExporter:
             events (list[RecordedEvent]): イベントのリスト
             filename (str, optional): 出力ファイル名。未指定時は現在日時から生成。
         """
-        if filename is None:
-            filename = f"{lrc_path.stem}_{datetime.now().strftime('%y%m%d%H%M%S')}.txt"
 
         output: list[str] = []
-        lrc_lines = self._lrc_to_lines(lrc_path)
-
-        for i, (start_t, text) in enumerate(lrc_lines):
+    
+        for i, (start_t, text) in enumerate(self.lrc_lines):
             # 歌詞区間に含まれるイベントを抽出
-            next_t = lrc_lines[i + 1][0] if i + 1 < len(lrc_lines) else start_t + 10.0
+            next_t = self.lrc_lines[i + 1][0] if i + 1 < len(self.lrc_lines) else start_t + 10.0
             cur_events = sorted(
                 [e for e in events if start_t <= e.timestamp < next_t],
                 key=lambda x: x.timestamp,
@@ -113,7 +108,7 @@ class TextChartExporter:
                 output.append(call_row)
 
         # ファイル書き出し
-        save_path = Path(self.config.pj_root_path) / "export" / filename
+        save_path = save_path.with_suffix(".txt")  
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(save_path, "w", encoding="utf-8") as f:

@@ -59,26 +59,19 @@ class MediaKeyController:
         return found_hwnd
 
     def _send_mediago_appcommand(self, hwnd: int) -> None:
-        """Media Go のウィンドウに直接 WM_APPCOMMAND を送信（方式4: バックグラウンド動作）"""
+        """Media Go のウィンドウに直接 WM_APPCOMMAND を送信（バックグラウンド動作）"""
         lparam = self.APPCOMMAND_MEDIA_PLAY_PAUSE << 16
-        # PostMessage だと破棄される場合があるため、テスト成功時と同じ SendMessageW を使用
         self.user32.SendMessageW(hwnd, self.WM_APPCOMMAND, hwnd, lparam)
 
     def _send_global_media_key(self) -> None:
         """Spotify / YouTube (ブラウザ) 等に向けた汎用グローバルメディアキー送出"""
         if self.is_windows:
             try:
-                # 1. システム全体へ WM_APPCOMMAND をブロードキャスト
-                lparam = self.APPCOMMAND_MEDIA_PLAY_PAUSE << 16
-                self.user32.SendNotifyMessageW(
-                    self.HWND_BROADCAST, self.WM_APPCOMMAND, 0, lparam
-                )
-
-                # 2. ハードウェア仮想キー (VK_MEDIA_PLAY_PAUSE) も送出
+                # 仮想キーコード (VK_MEDIA_PLAY_PAUSE) を送出する
                 self.user32.keybd_event(
                     self.VK_MEDIA_PLAY_PAUSE, 0, self.KEYEVENTF_EXTENDEDKEY, 0
                 )
-                time.sleep(0.01)
+                time.sleep(0.02)
                 self.user32.keybd_event(
                     self.VK_MEDIA_PLAY_PAUSE,
                     0,

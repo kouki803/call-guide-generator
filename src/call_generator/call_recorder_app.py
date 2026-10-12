@@ -114,6 +114,7 @@ def main():
     from call_generator.midi_exporter import MidiExporter
     from call_generator.text_exporter import TextChartExporter
     from call_generator.type import CallEvent, UserProfile
+    from call_generator.util.fname_resolver import FnameResolver
 
     # ハードコーディングによるテスト設定
     test_profile = UserProfile([
@@ -131,18 +132,16 @@ def main():
 
     arg_parser = ArgumentParser(description="Call Generator Prototype")
     arg_parser.add_argument("lrc", type=Path, help="LRCファイル")
-    arg_parser.add_argument(
-        "-o", "--output", type=Path, default=Path(config.pj_root_path) / "export", help="出力フォルダ（省略時は ./export/ に保存）"
-    )
+    arg_parser.add_argument("-o", "--output", type=Path, help="出力フォルダ（省略時は ./export/{曲名} に保存）")
     args = arg_parser.parse_args()
-
     app = CallRecorderApp(config, lrc_path=args.lrc)
     app.run()
 
     # export
     if app.recorded_events:
-        MidiExporter(config, lrc_name=args.lrc.stem).save(app.recorded_events, save_folder_path=args.output)
-        TextChartExporter(config).export(args.lrc, app.recorded_events, save_folder_path=args.output)
+        save_path = FnameResolver.out_file_path(args.lrc.stem, save_folder_path=args.output)
+        MidiExporter(config).save(app.recorded_events, save_path)
+        TextChartExporter(config, lrc_path=args.lrc).export(app.recorded_events, save_path)
 
 if __name__ == "__main__":
     main()
