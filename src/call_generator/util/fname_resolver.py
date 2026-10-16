@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -5,6 +6,7 @@ from pathvalidate import sanitize_filename
 
 
 class FnameResolver:
+    TITLE_CLEAN_PATTERN = re.compile(r"_timed_\d+$")
 
     @classmethod
     def out_file_path(cls, lrc_name: str, save_folder_path: Path | None = None) -> Path:
@@ -49,3 +51,7 @@ class FnameResolver:
                 if not candidate.exists():
                     return candidate
                 n += 1
+
+    @classmethod
+    def extract_title(cls, file_stem: str) -> str:
+        return cls.TITLE_CLEAN_PATTERN.sub("", file_stem)

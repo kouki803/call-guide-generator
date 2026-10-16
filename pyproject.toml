@@ -7,12 +7,14 @@ requires-python = ">=3.12"
 dependencies = [
     "mido>=1.3.3",
     "pathvalidate>=3.3.1",
+    "playwright>=1.64.0",
     "pynput>=1.8.1",
 ]
 
 [project.scripts]
 lrc_make = "call_generator.lrc_maker:main"
 call_record = "call_generator.call_recorder_app:main"
+png_out = "call_generator.guide_txt_formatter:main"
 
 [dependency-groups]
 dev = [
