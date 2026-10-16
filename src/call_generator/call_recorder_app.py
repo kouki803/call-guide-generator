@@ -36,8 +36,7 @@ class CallRecorderApp:
                     minutes, seconds, text = match.groups()
                     timestamp = int(minutes) * 60 + float(seconds)
                     text = text.strip()
-                    if text:
-                        lyrics.append((timestamp, text))
+                    lyrics.append((timestamp, text))
 
         lyrics.sort(key=lambda x: x[0])
         return lyrics
