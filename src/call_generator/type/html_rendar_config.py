@@ -24,10 +24,12 @@ class RenderConfig:
 
     # 特記事項用カラー定義
     alt_colors: dict[str, str] = field(default_factory=lambda: {
-        "call-green": "#0db654",     # 提案コール用の色    
+        "call-green": "#0db654",     # 提案コール用の色 
+        "call-orange": "#d66210",    # 上級コール用の色
     })
     marker_rules: tuple[MarkerRule, ...] = (
         MarkerRule(marker="△", css_class="call-green", replacement_char=" "),
+        MarkerRule(marker="☆", css_class="call-orange", replacement_char=" "),
         # 将来ルールが増えた場合もここに追加して対応
         # MarkerRule(marker="★", css_class="call-orange", replacement_char=" "),
     )
@@ -38,11 +40,11 @@ class RenderConfig:
         '"Courier New", Courier, monospace'
     )
     title_font_size: str = "24px"
-    line_font_size: str = "15px"
+    line_font_size: str = "16px"
     line_height: float = 1.2
     call_font_weight: str = "normal"
 
     # レイアウト
-    card_max_width: str = "515px"
-    card_padding: str = "40px"
+    card_max_width: str = "500px"
+    card_padding: str = "30px"
     card_border_radius: str = "12px"
