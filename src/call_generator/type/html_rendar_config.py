@@ -28,7 +28,7 @@ class RenderConfig:
     title_color: str = "#111827"  # タイトル文字色
     card_bg_color: str = "#ffffff"  # カード背景色
     body_bg_color: str = "#f8fafc"  # 全体背景色
-    border_color: str = "#e2e8f0"  # タイトル下などの区切り線
+    border_color: str = "#B9CDE8"  # タイトル下などの区切り線
 
     # マーカー・装飾ルール定義
     marker_rules: tuple[MarkerRule, ...] = (
@@ -46,7 +46,7 @@ class RenderConfig:
         ),
         MarkerRule(
             marker="◆",
-            color="#B10707",
+            color="#E43434",
             css_class="call-red",
             label="要注意箇所",
         ),

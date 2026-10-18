@@ -74,7 +74,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .legend-title {{
             font-size: 11px;
             font-weight: 700;
-            color: #64748b;
+            color: #262D36;
             padding-right: 8px;
             border-right: 1px solid {border_color};
             line-height: 1;
