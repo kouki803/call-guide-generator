@@ -39,15 +39,51 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: {card_border_radius};
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
         }}
+        .header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid {border_color};
+            gap: 16px;
+        }}
         .title {{
             font-size: {title_font_size};
             font-weight: 700;
             color: {title_color};
-            margin: 0 0 20px 0;
-            padding-bottom: 10px;
-            border-bottom: 2px solid {border_color};
-            text-align: center;
+            margin: 0;
             font-family: {font_family};
+            line-height: 1.2;
+            word-break: break-word;
+        }}
+        .legend {{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 8px;
+            background-color: {body_bg_color};
+            border: 1px solid {border_color};
+            border-radius: 6px;
+            font-size: {legend_font_size};
+            font-family: {font_family};
+            white-space: nowrap;
+            flex-shrink: 0;
+        }}
+        .legend-title {{
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            padding-right: 8px;
+            border-right: 1px solid {border_color};
+            line-height: 1;
+        }}
+        .legend-items {{
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-weight: 700;
+            line-height: 1.2;
         }}
         .lyrics-container {{
             line-height: {line_height};
@@ -75,7 +111,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
     <article class="card">
-        <h1 class="title">{title}</h1>
+        <header class="header">
+            <h1 class="title">{title}</h1>
+            {legend_content}
+        </header>
         <div class="lyrics-container">{body_content}</div>
     </article>
 </body>
@@ -110,7 +149,7 @@ class GuideTxtFormatter:
             return None
 
         escaped_markers = "|".join(
-            re.escape(marker) for marker in self._rule_map.keys()
+            re.escape(marker) for marker in self._rule_map
         )
         pattern_str = rf"(\([^)]+\)(?:x\d+)?)({escaped_markers})"
         return re.compile(pattern_str)
@@ -118,13 +157,42 @@ class GuideTxtFormatter:
     def _build_extra_styles(self) -> str:
         """CSS用の予備カラースタイル文字列を生成"""
         styles = []
-        for class_name, color_code in self.config.alt_colors.items():
-            styles.append(
-                f".{class_name} {{ color: {color_code} !important; }}"
-            )
+        for rule in self.config.marker_rules:
+            if rule.color:
+                styles.append(
+                    f".{rule.css_class} {{ color: {rule.color} !important; }}"
+                )
         return "\n        ".join(styles)
 
-    def _apply_marker_rules(self, text: str) -> str:
+    def _build_legend_html(self, used_markers: set[str] | None = None) -> str:
+        """設定内のMarkerRulesから、本文中に存在するマーカーのみ凡例HTML要素を生成"""
+        items: list[str] = []
+        for rule in self.config.marker_rules:
+            if not rule.label:
+                continue
+            if used_markers is not None and rule.marker not in used_markers:
+                continue
+            escaped_label = html.escape(rule.label)
+            items.append(
+                f'<span class="{rule.css_class}">({escaped_label})</span>'
+            )
+        if not items:
+            return ""
+        items_str = "\n                ".join(items)
+        return (
+            f'<div class="legend">\n'
+            f'            <span class="legend-title">凡<br>例</span>\n'
+            f'            <div class="legend-items">\n'
+            f'                {items_str}\n'
+            f'            </div>\n'
+            f'        </div>'
+        )
+
+    def _apply_marker_rules(
+        self,
+        text: str,
+        used_markers: set[str] | None = None,
+    ) -> str:
         """マーカー記号付きコールを検出し、spanタグと全角空白に置換"""
         if not self._marker_pattern:
             return text
@@ -132,14 +200,17 @@ class GuideTxtFormatter:
         def _replacer(match: re.Match) -> str:
             call_body = match.group(1)
             marker = match.group(2)
+            if used_markers is not None:
+                used_markers.add(marker)
             rule = self._rule_map[marker]
             return f'<span class="{rule.css_class}">{call_body}</span>{rule.replacement_char}'
 
         return self._marker_pattern.sub(_replacer, text)
 
-    def _parse_lines_to_html(self, raw_text: str) -> str:
+    def _parse_lines_to_html(self, raw_text: str) -> tuple[str, set[str]]:
         """元テキストの行構造・空行をそのままHTML要素へ変換"""
         html_elements: list[str] = []
+        used_markers: set[str] = set()
         lines = raw_text.splitlines()
 
         for line in lines:
@@ -148,9 +219,9 @@ class GuideTxtFormatter:
                 continue
 
             escaped = html.escape(line)
-            processed = self._apply_marker_rules(escaped)
 
             if line.startswith((" ", "\u3000")):
+                processed = self._apply_marker_rules(escaped, used_markers)
                 html_elements.append(
                     f'<span class="line call">{processed}</span>'
                 )
@@ -159,7 +230,7 @@ class GuideTxtFormatter:
                     f'<span class="line lyrics">{escaped}</span>'
                 )
 
-        return "\n".join(html_elements)
+        return "\n".join(html_elements), used_markers
 
     def build_html_content(self, src_path: Path) -> str:
         """テキストファイルを解析し、レンダリング用のHTML文字列を生成"""
@@ -168,11 +239,12 @@ class GuideTxtFormatter:
             title = FnameResolver.extract_title(src_path.stem)
         else: 
             title = self.song_title
-        body_content = self._parse_lines_to_html(raw_text)
+        body_content, used_markers = self._parse_lines_to_html(raw_text)
 
         context = {
             **asdict(self.config),
             "title": html.escape(title),
+            "legend_content": self._build_legend_html(used_markers),
             "body_content": body_content,
             "extra_color_styles": self._build_extra_styles(),
         }

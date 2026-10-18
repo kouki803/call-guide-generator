@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -6,8 +6,16 @@ class MarkerRule:
     """記号によるコールの特殊装飾ルールの定義"""
 
     marker: str  # トリガーとなる記号 (例: "△")
-    css_class: str  # 付与するCSSクラス (例: "call-green")
+    color: str  # 特殊装飾用のカラーコード (例: "#0db654")
+    css_class: str = ""  # 付与するCSSクラス (例: "call-green", 省略時は自動生成)
     replacement_char: str = "\u3000"  # マーカーを除去した後の代替文字（等幅維持用）
+    label: str = ""  # 凡例用ラベル (例: "お好みで")
+
+    def __post_init__(self) -> None:
+        if not self.css_class and self.marker:
+            object.__setattr__(
+                self, "css_class", f"call-marker-{ord(self.marker[0])}"
+            )
 
 
 @dataclass(frozen=True)
@@ -22,16 +30,28 @@ class RenderConfig:
     body_bg_color: str = "#f8fafc"  # 全体背景色
     border_color: str = "#e2e8f0"  # タイトル下などの区切り線
 
-    # 特記事項用カラー定義
-    alt_colors: dict[str, str] = field(default_factory=lambda: {
-        "call-green": "#0db654",     # 提案コール用の色 
-        "call-orange": "#d66210",    # 上級コール用の色
-    })
+    # マーカー・装飾ルール定義
     marker_rules: tuple[MarkerRule, ...] = (
-        MarkerRule(marker="△", css_class="call-green", replacement_char=" "),
-        MarkerRule(marker="☆", css_class="call-orange", replacement_char=" "),
+        MarkerRule(
+            marker="△",
+            color="#0db654",
+            css_class="call-green",
+            label="お好みで",
+        ),
+        MarkerRule(
+            marker="☆",
+            color="#d66210",
+            css_class="call-orange",
+            label="演者さん希望",
+        ),
+        MarkerRule(
+            marker="◆",
+            color="#B10707",
+            css_class="call-red",
+            label="要注意箇所",
+        ),
         # 将来ルールが増えた場合もここに追加して対応
-        # MarkerRule(marker="★", css_class="call-orange", replacement_char=" "),
+        # MarkerRule(marker="★", color="#d66210", css_class="call-orange", label=""),
     )
 
     # フォント・サイズ・行間
@@ -41,6 +61,7 @@ class RenderConfig:
     )
     title_font_size: str = "24px"
     line_font_size: str = "16px"
+    legend_font_size: str = "12px"
     line_height: float = 1.2
     call_font_weight: str = "normal"
 
