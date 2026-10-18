@@ -44,9 +44,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            margin: 0 0 20px 0;
-            padding-bottom: 10px;
-            border-bottom: 2px solid {border_color};
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid {border_color};
             gap: 16px;
         }}
         .title {{
@@ -60,31 +60,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }}
         .legend {{
             display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 4px 8px;
+            flex-direction: column;
+            gap: 0px;
+            padding: 6px 10px 5px 10px;
             background-color: {body_bg_color};
             border: 1px solid {border_color};
-            border-radius: 6px;
+            border-radius: 4px;
             font-size: {legend_font_size};
             font-family: {font_family};
             white-space: nowrap;
             flex-shrink: 0;
-        }}
-        .legend-title {{
-            font-size: 11px;
-            font-weight: 700;
-            color: #262D36;
-            padding-right: 8px;
-            border-right: 1px solid {border_color};
             line-height: 1;
         }}
-        .legend-items {{
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
+        .legend-item {{
             font-weight: 700;
-            line-height: 1.2;
+            color: {legend_desc_color};
         }}
         .lyrics-container {{
             line-height: {line_height};
@@ -169,23 +159,31 @@ class GuideTxtFormatter:
         """設定内のMarkerRulesから、本文中に存在するマーカーのみ凡例HTML要素を生成"""
         items: list[str] = []
         for rule in self.config.marker_rules:
-            if not rule.label:
+            if not rule.label and not rule.description:
                 continue
             if used_markers is not None and rule.marker not in used_markers:
                 continue
-            escaped_label = html.escape(rule.label)
-            items.append(
-                f'<span class="{rule.css_class}">({escaped_label})</span>'
+
+            escaped_label = html.escape(rule.label) if rule.label else ""
+            escaped_desc = (
+                html.escape(rule.description) if rule.description else ""
             )
+
+            if escaped_label and escaped_desc:
+                content = f'<span class="{rule.css_class}">{escaped_label}</span>: {escaped_desc}'
+            elif escaped_label:
+                content = f'<span class="{rule.css_class}">{escaped_label}</span>'
+            else:
+                content = f'<span class="{rule.css_class}">{escaped_desc}</span>'
+
+            items.append(f'<div class="legend-item">{content}</div>')
+
         if not items:
             return ""
-        items_str = "\n                ".join(items)
+        items_str = "\n            ".join(items)
         return (
             f'<div class="legend">\n'
-            f'            <span class="legend-title">凡<br>例</span>\n'
-            f'            <div class="legend-items">\n'
-            f'                {items_str}\n'
-            f'            </div>\n'
+            f'            {items_str}\n'
             f'        </div>'
         )
 

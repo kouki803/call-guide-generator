@@ -7,9 +7,10 @@ class MarkerRule:
 
     marker: str  # トリガーとなる記号 (例: "△")
     color: str  # 特殊装飾用のカラーコード (例: "#0db654")
+    label: str = ""  # 色・マーカーの表示名 (例: "赤字", "緑字")
+    description: str = ""  # 凡例用の説明文 (例: "要注意箇所", "お好みで")
     css_class: str = ""  # 付与するCSSクラス (例: "call-green", 省略時は自動生成)
     replacement_char: str = "\u3000"  # マーカーを除去した後の代替文字（等幅維持用）
-    label: str = ""  # 凡例用ラベル (例: "お好みで")
 
     def __post_init__(self) -> None:
         if not self.css_class and self.marker:
@@ -29,29 +30,33 @@ class RenderConfig:
     card_bg_color: str = "#ffffff"  # カード背景色
     body_bg_color: str = "#f8fafc"  # 全体背景色
     border_color: str = "#B9CDE8"  # タイトル下などの区切り線
+    legend_desc_color: str = "#3A434F"  # 凡例説明文の文字色
 
     # マーカー・装飾ルール定義
     marker_rules: tuple[MarkerRule, ...] = (
+        # 一番上から描画されるので重要度順に並べる
+        MarkerRule(
+            marker="☆",
+            color="#E43434",
+            css_class="call-orange",
+            label="赤字",
+            description="演者さん希望",
+        ),
         MarkerRule(
             marker="△",
             color="#0db654",
             css_class="call-green",
-            label="お好みで",
-        ),
-        MarkerRule(
-            marker="☆",
-            color="#d66210",
-            css_class="call-orange",
-            label="演者さん希望",
+            label="緑字",
+            description="お好みで",
         ),
         MarkerRule(
             marker="◆",
-            color="#E43434",
+            color="#d66210",
             css_class="call-red",
-            label="要注意箇所",
+            label="橙字",
+            description="要注意箇所",
         ),
         # 将来ルールが増えた場合もここに追加して対応
-        # MarkerRule(marker="★", color="#d66210", css_class="call-orange", label=""),
     )
 
     # フォント・サイズ・行間
