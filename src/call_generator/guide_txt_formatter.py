@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import html
 import re
 import sys
@@ -346,8 +347,17 @@ def main():
             )
             print(f"[Success] PNGを出力しました: {out_path.resolve()}")
         
-
-    except (OSError, UnicodeError, ValueError, KeyError, RuntimeError, FileNotFoundError) as e:
+    except (PermissionError, OSError) as e:
+        if e.errno in (errno.EINVAL, errno.EACCES):
+            target = e.filename or "出力先ファイル"
+            print(
+                f"[Error] 出力先ファイル '{target}' が他のプログラム（画像ビューアなど）で開かれているためアクセスできません。",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"[Error] 処理中にエラーが発生しました: {e}", file=sys.stderr)
+        sys.exit(1)
+    except (UnicodeError, ValueError, KeyError, RuntimeError) as e:
         print(f"[Error] 処理中にエラーが発生しました: {e}", file=sys.stderr)
         sys.exit(1)
 
