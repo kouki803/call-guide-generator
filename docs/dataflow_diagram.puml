@@ -1,0 +1,83 @@
+@startuml call_generator_dataflow
+title コールガイド生成 成果物パイプライン図 (Artifact Pipeline Diagram)
+
+skinparam {
+    ArtifactBackgroundColor #FFFFFF
+    ArtifactBorderColor #37474F
+    ComponentBackgroundColor #E8F5E9
+    ComponentBorderColor #2E7D32
+    ActorBackgroundColor #E3F2FD
+    ActorBorderColor #1565C0
+    CardBackgroundColor #FFF9C4
+    CardBorderColor #F57F17
+    NoteBackgroundColor #E1F5FE
+    NoteBorderColor #0288D1
+    ArrowColor #37474F
+    FontName "Yu Gothic, Meiryo, sans-serif"
+    DefaultFontSize 12
+    RoundCorner 8
+}
+
+actor "ユーザー\n(作業者)" as User
+
+package "1. 歌詞タイミング付与" {
+    artifact "プレーン歌詞\n**<song>.txt**" as TxtPlain <<artifact>>
+    component "**lrc_make**\n(`uv run lrc_make <song>.txt`)" as LrcMakeCmd <<CLI Tool>>
+    artifact "タイムスタンプ付きLRC\n**<song>_timed.lrc**" as LrcTimed <<artifact>>
+}
+
+package "2. コール記録 & 生テキスト/MIDI出力" {
+    component "**call_record**\n(`uv run call_record <song>_timed.lrc`)" as CallRecordCmd <<CLI Tool>>
+    
+    package "export/<曲名>/ (自動生成フォルダ)" as ExportDir1 {
+        artifact "MIDI打点ファイル\n**<song>_timed_<timestamp>.mid**" as MidiFile <<artifact>>
+        artifact "コール入り生テキスト\n**<song>_timed_<timestamp>.txt**" as RawTxt <<artifact>>
+    }
+}
+
+package "3. テキスト校正 (手作業)" {
+    card "テキストエディタによる編集\n---\n・コール文字位置 / 空白の調整\n・注釈マーカー (☆, △, ◆) の付与" as ManualEdit
+    artifact "編集済みコールテキスト(上書き保存)" as EditedTxt <<artifact>>
+}
+
+package "4. HTML / PNG画像生成" {
+    component "**png_out**\n(`uv run png_out <song>_timed_<timestamp>.txt`)" as PngOutCmd <<CLI Tool>>
+    
+    package "export/<曲名>/ (出力成果物)" as ExportDir2 {
+        artifact "レンダリング用HTML\n**<song>_timed_<timestamp>.html**" as OutHtml <<artifact>>
+        artifact "【完成品】コールガイド画像\n**<song>_timed_<timestamp>.png**\nまたは **<-tで指定した曲名>.png**" as OutPng <<artifact>> #E8F5E9
+    }
+    
+    component "ブラウザプレビュー\n(`--preview` オプション時)" as PreviewBrowser <<GUI>>
+}
+
+' パイプライン接続
+TxtPlain --> LrcMakeCmd : 入力
+User ..> LrcMakeCmd : スペース打鍵で\nタイミング同期
+LrcMakeCmd --> LrcTimed : 自動生成
+
+LrcTimed --> CallRecordCmd : 入力
+User ..> CallRecordCmd : 1〜9キー打鍵で\nコール記録
+CallRecordCmd --> MidiFile : 生成 (DAW等で利用可)
+CallRecordCmd --> RawTxt : 生成
+
+RawTxt -down-> ManualEdit : 読み込み
+User ..> ManualEdit : 手動でレイアウト調整
+ManualEdit --> EditedTxt : 保存
+
+EditedTxt --> PngOutCmd : 入力
+OutHtml ..> PreviewBrowser : --preview 指定時\n(一時HTMLを開く)
+PreviewBrowser ..> User : 目視確認
+PngOutCmd --> OutHtml
+OutHtml -down-> OutPng : Playwrightでレンダリング\n-t "<曲名>" 指定
+
+
+note bottom of OutPng
+  **最終成果物 (コール表画像)**
+  - タイトル・曲名
+  - カラーリングされたコール表記
+  - 注釈マーカーに基づく凡例
+end note
+
+footer call-generator Artifact Pipeline
+@enduml

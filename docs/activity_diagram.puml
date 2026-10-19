@@ -1,0 +1,158 @@
+@startuml call_generator_activity
+title コールガイド生成 業務・作業フロー (Activity Diagram)
+
+skinparam {
+    ActivityBackgroundColor #FDFDFD
+    ActivityBorderColor #2B3A42
+    ActivityDiamondBackgroundColor #FFF9C4
+    ActivityDiamondBorderColor #F57F17
+    PartitionBorderColor #90A4AE
+    PartitionBackgroundColor #F5F7F8
+    NoteBackgroundColor #E1F5FE
+    NoteBorderColor #0288D1
+    ArrowColor #37474F
+    FontName "Yu Gothic, Meiryo, sans-serif"
+    DefaultFontSize 12
+}
+
+|#E8F0FE|ユーザー|
+|#FFF8E1|外部音楽プレイヤー|
+|#E8F5E9|call-generator (CLI)|
+|#F3E5F5|成果物 / ファイル|
+
+|ユーザー|
+start
+:改行区切りの歌詞テキストを準備;
+
+|成果物 / ファイル|
+:歌詞テキストファイル (.txt);
+
+|ユーザー|
+partition "Phase 1: 歌詞タイミング記録 (lrc_make)" {
+    :音楽プレイヤーで曲を頭出し (0.0秒で一時停止);
+    
+    |call-generator (CLI)|
+    :ターミナルで起動\n`uv run lrc_make <歌詞txt>`;
+    :再生開始待ち状態 (待機画面を表示);
+    
+    |ユーザー|
+    :スペースキーを押下;
+    
+    |call-generator (CLI)|
+    :メディアキー (再生/一時停止) を送出;
+    
+    |外部音楽プレイヤー|
+    :音楽の再生を開始;
+    
+    |call-generator (CLI)|
+    :時間計測を開始 (time.monotonic);
+    
+    |ユーザー|
+    repeat
+        :曲を聴きながら、歌詞の歌い出しに合わせてスペースキーを押下;
+        |call-generator (CLI)|
+        :現在行にタイムスタンプを付与;
+        :プレビュー画面を更新 (次の行へ);
+        |ユーザー|
+    repeat while (歌詞の途中?) is (yes)
+    -> 全行付与完了 または 中断;
+    
+    :「q」または「Esc」キーを押下;
+    
+    |call-generator (CLI)|
+    :メディアキーを送出して音楽を停止;
+    :LRC形式でファイル出力;
+    
+    |外部音楽プレイヤー|
+    :再生を停止;
+    
+    |成果物 / ファイル|
+    :タイムスタンプ付きLRCファイル\n`<ファイル名>_timed.lrc`;
+}
+
+|ユーザー|
+partition "Phase 2: コール記録 (call_record)" {
+    :音楽プレイヤーで再度曲を頭出し (0.0秒で一時停止);
+    
+    |call-generator (CLI)|
+    :ターミナルで起動\n`uv run call_record <_timed.lrc>`;
+    :LRCファイルをパースして待機;
+    
+    |ユーザー|
+    :スペースキーを押下;
+    
+    |call-generator (CLI)|
+    :メディアキーを送出;
+    :録音フラグ ON & 歌詞表示スレッド起動;
+    
+    |外部音楽プレイヤー|
+    :音楽の再生を開始;
+    
+    |call-generator (CLI)|
+    fork
+        while (録音中?) is (yes)
+            :経過時間に応じた歌詞をコンソールに自動表示;
+        endwhile
+    fork again
+        |ユーザー|
+        while (曲の再生中?) is (yes)
+            :音楽・歌詞に合わせてコールキー ([1]〜[9]) を押下;
+            |call-generator (CLI)|
+            :押下時刻とコール定義を RecordedEvent として蓄積;
+        endwhile
+    end fork
+    
+    |ユーザー|
+    :再度スペースキーを押下;
+    
+    |call-generator (CLI)|
+    :メディアキーを送出して音楽を停止;
+    :録音終了 & エクスポーター呼び出し;
+    :1. MIDIファイルを出力 (MidiExporter);
+    :2. コール入り生テキストを出力 (TextChartExporter);
+    
+    |外部音楽プレイヤー|
+    :再生を停止;
+    
+    |成果物 / ファイル|
+    :MIDIファイル (`.mid`)\n生テキストファイル (`_raw.txt`);
+}
+
+|ユーザー|
+partition "Phase 3: テキスト編集 & 画像出力 (png_out)" {
+    repeat
+        :テキストエディタで `_raw.txt` を編集;
+        note right
+            - コール位置・インデント・改行の微調整
+            - 注釈記号 (△, ☆, ◆ 等) の付与
+        end note
+        
+        :プレビュー確認を実行\n`uv run png_out <編集後txt> --preview`;
+        
+        |call-generator (CLI)|
+        :HTMLファイルを一時生成;
+        :デフォルトブラウザでプレビューを自動起動;
+        
+        |ユーザー|
+        :ブラウザ上でレイアウト・改行・凡例を確認;
+    backward:気になる箇所を再調整;
+    repeat while (レイアウト修正が必要?) is (yes)
+    -> OK;
+    
+    :完成版PNG出力コマンドを実行\n`uv run png_out <編集後txt> -t "<曲名>"`;
+    
+    |call-generator (CLI)|
+    :HTMLテンプレートに歌詞・コール・凡例スタイルを適用;
+    :HTMLファイルを保存;
+    :Playwright (Chromium) をバックグラウンド起動;
+    :.card 要素の領域を高解像度スクリーンショット撮影;
+    
+    |成果物 / ファイル|
+    :完成版HTMLファイル (`.html`)\n完成版コールガイド画像 (`.png`);
+}
+
+|ユーザー|
+:完成したコールガイド画像を確認・共有;
+stop
+
+@enduml

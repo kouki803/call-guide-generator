@@ -1,20 +1,26 @@
-@startuml
+@startuml call_recorder_sequence
 autonumber
-skinparam BoxPadding 10
-skinparam ParticipantPadding 10
+skinparam {
+    BoxPadding 10
+    ParticipantPadding 10
+    FontName "Yu Gothic, Meiryo, sans-serif"
+    DefaultFontSize 12
+    RoundCorner 6
+}
 
 actor "ユーザー" as User
-participant "Main\n(__main__)" as Main
-participant "CallgeneratorApp" as App
+participant "Main\n(main)" as Main
+participant "CallRecorderApp" as App
 participant "MediaKeyController" as MediaKey
 participant "OS / 外部プレイヤー\n(YouTube / Media Go 等)" as ExternalPlayer
-participant "keyboard.Listener\n(スレッド)" as Listener
+participant "keyboard.Listener\n(キー監視スレッド)" as Listener
 participant "歌詞表示スレッド\n(_lyrics_display_loop)" as DisplayThread
+participant "FnameResolver" as Resolver
 participant "MidiExporter" as MidiExp
 participant "TextChartExporter" as TextExp
 
 == 1. 初期化 & 起動 ==
-User -> Main: スクリプト実行 (lrcファイル指定)
+User -> Main: コマンド実行\n`uv run call_record <song>_timed.lrc`
 activate Main
 
 Main -> App: __init__(config, lrc_path)
@@ -55,10 +61,73 @@ activate DisplayThread
 App --> Listener: 処理継続
 deactivate App
 
-== 3. ループ処理 (歌詞表示 & コール記録) ==
-par 歌詞表示ループ
-    loop is_recording == True
+== 3. 並行処理 (歌詞逐次表示 & コール打点記録) ==
+par 歌詞表示ループ (DisplayThread)
+    loop is_recording == True (0.05秒間隔)
         DisplayThread -> DisplayThread: 経過時間を計測\n(time.time() - start_time)
-        opt 経過時間 >= 歌詞タイムスタンプ
-            DisplayThread -> DisplayThread: print(歌詞テキスト)
+        opt 経過時間 >= 次の歌詞のタイムスタンプ
+            DisplayThread -> DisplayThread: コンソールに歌詞を出力\n(print "🎵 [mm:ss] 歌詞")
         end
+    end
+else コールキー入力受付 (Listener)
+    loop 曲の再生中
+        User -> Listener: 数字キー押下 (例: '1'〜'9')
+        Listener -> App: on_press(key)
+        activate App
+        App -> App: config.profile.find_by_key(key.char)\n[コール定義の検索]
+        App -> App: recorded_events.append(\n  RecordedEvent(elapsed, event_def)\n)
+        App --> Listener: 処理継続
+        deactivate App
+    end
+end
+
+== 4. 録音停止 (再度Spaceキー押下) ==
+User -> Listener: Key.space 押下 (録音終了)
+Listener -> App: on_press(Key.space)
+activate App
+
+App -> App: is_recording = False
+note right of DisplayThread: is_recording が False になり\n表示ループが終了
+DisplayThread --> App: スレッド停止
+deactivate DisplayThread
+
+App -> MediaKey: send_play_pause()
+activate MediaKey
+MediaKey -> ExternalPlayer: メディア停止キー送出
+activate ExternalPlayer
+ExternalPlayer --> MediaKey:
+deactivate ExternalPlayer
+MediaKey --> App:
+deactivate MediaKey
+
+App --> Listener: return False (リスナー終了)
+deactivate App
+Listener --> App: join 完了 (スレッド終了)
+deactivate Listener
+App --> Main: run 完了
+deactivate App
+
+== 5. ファイル出力 (エクスポート) ==
+opt recorded_events が存在する場合
+    Main -> Resolver: out_file_path(lrc.stem, save_folder_path)
+    activate Resolver
+    Resolver --> Main: save_path\n("export/<曲名>/<曲名>_timed_<timestamp>")
+    deactivate Resolver
+
+    Main -> MidiExp: save(recorded_events, save_path)
+    activate MidiExp
+    MidiExp -> MidiExp: 16分音符グリッドにクオンタイズして書き出し
+    MidiExp --> Main: <save_path>.mid 保存完了
+    deactivate MidiExp
+
+    Main -> TextExp: export(recorded_events, save_path)
+    activate TextExp
+    TextExp -> TextExp: 同一コールの縮約 & 歌詞行への結合
+    TextExp --> Main: <save_path>.txt 保存完了
+    deactivate TextExp
+end
+
+Main --> User: 処理完了メッセージ
+deactivate Main
+
+@enduml
