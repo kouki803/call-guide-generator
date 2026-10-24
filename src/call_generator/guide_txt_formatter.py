@@ -96,6 +96,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             color: {call_color};
             font-weight: {call_font_weight};
         }}
+        .masked-prefix {{
+            color: {card_bg_color};
+        }}
         /* カスタム着色スタイル */
         {extra_color_styles}
     </style>
@@ -217,16 +220,31 @@ class GuideTxtFormatter:
                 html_elements.append('<span class="line lyrics">&nbsp;</span>')
                 continue
 
-            escaped = html.escape(line)
+            # コール行冒頭に "*" または "**" がある場合、"*" を消去してコール行として扱う
+            star_match = re.match(r"^([ \u3000]*)[*＊]+(.*)$", line)
+            is_call = line.startswith((" ", "\u3000")) or star_match is not None
 
-            if line.startswith((" ", "\u3000")):
+            if star_match:
+                cleaned_line = star_match.group(1) + star_match.group(2)
+            else:
+                cleaned_line = line
+
+            escaped = html.escape(cleaned_line)
+
+            if is_call:
                 processed = self._apply_marker_rules(escaped, used_markers)
                 html_elements.append(
                     f'<span class="line call">{processed}</span>'
                 )
             else:
+                match = re.match(r"^([_＿]+)(.*)$", escaped)
+                if match:
+                    prefix, rest = match.groups()
+                    content = f'<span class="masked-prefix">{prefix}</span>{rest}'
+                else:
+                    content = escaped
                 html_elements.append(
-                    f'<span class="line lyrics">{escaped}</span>'
+                    f'<span class="line lyrics">{content}</span>'
                 )
 
         return "\n".join(html_elements), used_markers
