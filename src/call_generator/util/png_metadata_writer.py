@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import argparse
 import io
 import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -105,3 +107,59 @@ class PngMetadataWriter:
         # ファイルシステムの更新日時 (mtime) も同期
         ts = now.timestamp()
         os.utime(out_file, (ts, ts))
+
+    @classmethod
+    def update_file_metadata(
+        cls,
+        target_file: Path,
+        now: datetime | None = None,
+    ) -> None:
+        """既存のPNGファイルを読み込み、メタデータを付与・更新して上書き保存する"""
+        if not target_file.exists():
+            raise FileNotFoundError(f"ファイルが存在しません: {target_file}")
+
+        raw_bytes = target_file.read_bytes()
+        cls.save_with_metadata(raw_bytes, target_file, now=now)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="既存のPNGファイルに現在時刻の更新日時メタデータを書き込む"
+    )
+    parser.add_argument(
+        "target_file",
+        type=Path,
+        help="対象のPNGファイルパス",
+    )
+    args = parser.parse_args()
+
+    if not args.target_file.exists():
+        print(
+            f"[Error] 指定されたファイルが存在しません: {args.target_file}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    try:
+        PngMetadataWriter.update_file_metadata(args.target_file)
+        print(f"[Success] メタデータを更新しました: {args.target_file.resolve()}")
+
+        # 確認用に出力
+        with Image.open(args.target_file) as im:
+            print("\n--- 付与されたメタデータ ---")
+            print("[Text]")
+            for k, v in im.text.items():
+                print(f"  {k}: {v}")
+            print("[Exif]")
+            exif = im.getexif()
+            tag_names = {0x0132: "DateTime", 0x9003: "DateTimeOriginal"}
+            for tag, val in exif.items():
+                name = tag_names.get(tag, f"0x{tag:04X}")
+                print(f"  {name} (0x{tag:04X}): {val}")
+    except (PermissionError, OSError, ValueError) as e:
+        print(f"[Error] 処理中にエラーが発生しました: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
