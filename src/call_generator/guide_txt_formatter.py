@@ -10,6 +10,7 @@ from pathlib import Path
 
 from call_generator.type.html_rendar_config import RenderConfig
 from call_generator.util.fname_resolver import FnameResolver
+from call_generator.util.png_metadata_writer import PngMetadataWriter
 from call_generator.util.png_renderer import PlaywrightRenderer
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -290,7 +291,7 @@ class GuideTxtFormatter:
         src_path: Path,
         save_folder_path: Path | None = None,
     ) -> Path:
-        """HTML文字列を生成し、レンダラーから取得したPNGバイナリをファイルに保存する"""
+        """HTML文字列を生成し、レンダラーから取得したPNG画像に更新日時メタデータを書き込んでファイルに保存する"""
         rendered_html = self.build_html_content(src_path)
 
         if save_folder_path is None:
@@ -299,9 +300,8 @@ class GuideTxtFormatter:
         out_file = (save_folder_path / title).with_suffix(".png")
         out_file.parent.mkdir(parents=True, exist_ok=True)
 
-
-        png_data = self._get_renderer().render_to_png_bytes(rendered_html)
-        out_file.write_bytes(png_data)
+        raw_png_data = self._get_renderer().render_to_png_bytes(rendered_html)
+        PngMetadataWriter.save_with_metadata(raw_png_data, out_file)
 
         return out_file
 
